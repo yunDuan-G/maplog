@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { MapCanvas } from './components/MapCanvas';
 import { NineGridCanvas } from './components/NineGridCanvas';
 import { Map, Grid } from 'lucide-react';
+import { GallerySettings } from './components/GallerySettings.tsx';
+import { ImageCompressor } from './components/ImageCompressor.tsx';
+import { saveMapGalleryImage, saveNineGridGalleryImage, GalleryImage } from './services/db';
 
 export default function App() {
   // 从 localStorage 读取保存的视图状态，默认值为 'map'
@@ -10,10 +13,88 @@ export default function App() {
     return (savedView === 'map' || savedView === 'ninegrid') ? savedView : 'map';
   });
 
+  // 图库设置模态框状态
+  const [showGallerySettings, setShowGallerySettings] = useState(false);
+  
+  // 图片压缩模态框状态
+  const [showImageCompressor, setShowImageCompressor] = useState(false);
+  const [currentCompressFile, setCurrentCompressFile] = useState<File | null>(null);
+  const [currentCompressType, setCurrentCompressType] = useState<'map' | 'ninegrid'>('map');
+
   // 当 currentView 变化时，保存到 localStorage
   useEffect(() => {
     localStorage.setItem('currentView', currentView);
   }, [currentView]);
+
+  // 监听来自子组件的设置事件
+  useEffect(() => {
+    const handleOpenSettings = () => {
+      setShowGallerySettings(true);
+    };
+
+    window.addEventListener('openGallerySettings', handleOpenSettings);
+    return () => {
+      window.removeEventListener('openGallerySettings', handleOpenSettings);
+    };
+  }, []);
+
+  // 监听来自子组件的压缩事件
+  useEffect(() => {
+    const handleOpenCompressor = (event: CustomEvent) => {
+      const { file, type } = event.detail;
+      setCurrentCompressFile(file);
+      setCurrentCompressType(type);
+      setShowImageCompressor(true);
+    };
+
+    window.addEventListener('openImageCompressor', handleOpenCompressor as EventListener);
+    return () => {
+      window.removeEventListener('openImageCompressor', handleOpenCompressor as EventListener);
+    };
+  }, []);
+
+  // 生成唯一ID的函数
+  const generateUUID = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    } else {
+      // fallback方法生成UUID
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+  };
+
+  // 处理压缩完成
+  const handleCompress = async (compressedBlob: Blob) => {
+    if (currentCompressFile) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        const newImage: GalleryImage = {
+          id: generateUUID(),
+          data: base64,
+          timestamp: Date.now(),
+        };
+        if (currentCompressType === 'map') {
+          await saveMapGalleryImage(newImage);
+        } else {
+          await saveNineGridGalleryImage(newImage);
+        }
+        setShowImageCompressor(false);
+        setCurrentCompressFile(null);
+      };
+      reader.readAsDataURL(compressedBlob);
+    }
+  };
+
+  // 处理压缩取消
+  const handleCompressCancel = () => {
+    setShowImageCompressor(false);
+    setCurrentCompressFile(null);
+  };
 
   return (
     <main className="w-full h-screen overflow-hidden bg-slate-100">
@@ -38,7 +119,26 @@ export default function App() {
       {/* 主要内容 */}
       {currentView === 'map' ? <MapCanvas /> : <NineGridCanvas />}
 
+      {/* 图库设置模态框 */}
+      {showGallerySettings && (
+        <GallerySettings
+          onClose={() => setShowGallerySettings(false)}
+        />
+      )}
+
+      {/* 图片压缩模态框 */}
+      {showImageCompressor && currentCompressFile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <ImageCompressor
+              originalFile={currentCompressFile}
+              onCompress={handleCompress}
+              onCancel={handleCompressCancel}
+            />
+          </div>
+        </div>
+      )}
 
     </main>
   );
-}
+};

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, Trash2, ChevronDown, Image as ImageIcon, Link, Database } from 'lucide-react';
+import { Upload, Trash2, ChevronDown, Image as ImageIcon, Link, Database, Settings } from 'lucide-react';
 import { 
   saveMapGalleryImage, 
   getAllMapGalleryImages, 
@@ -11,7 +11,7 @@ import {
   clearNineGridGallery, 
   GalleryImage 
 } from '../services/db';
-import { CustomModal } from './CustomModal';
+import { CustomModal } from './CustomModal.tsx';
 
 interface ImageGalleryProps {
   isOpen: boolean;
@@ -20,6 +20,8 @@ interface ImageGalleryProps {
   onFillWithImage: (image: string) => void;
   hasActiveProvince: boolean;
   type: 'map' | 'ninegrid';
+  onOpenSettings: () => void;
+  onOpenCompressor: (file: File) => void;
 }
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({ 
@@ -29,6 +31,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   onFillWithImage,
   hasActiveProvince,
   type,
+  onOpenSettings,
+  onOpenCompressor,
 }) => {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
@@ -39,11 +43,29 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const [modalType, setModalType] = useState<'confirm' | 'alert'>('confirm');
   const [importData, setImportData] = useState<any>(null);
   const [importType, setImportType] = useState<'map' | 'ninegrid'>('map');
+  const [compressionSettings, setCompressionSettings] = useState({
+    enableCompression: false,
+    compressionThreshold: 1, // 单位：MB
+    compressionQuality: 0.7,
+    maxWidth: 1920
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadImages();
+    loadCompressionSettings();
   }, [type]);
+
+  const loadCompressionSettings = () => {
+    const savedSettings = localStorage.getItem('gallerySettings');
+    if (savedSettings) {
+      try {
+        setCompressionSettings(JSON.parse(savedSettings));
+      } catch (error) {
+        console.error('加载压缩设置失败:', error);
+      }
+    }
+  };
 
   const loadImages = async () => {
     try {
@@ -159,23 +181,17 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const handleFiles = async (files: File[]) => {
     for (const file of files) {
       if (file.type.startsWith('image/')) {
-        // 处理图片文件
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const base64 = event.target?.result as string;
-          const newImage: GalleryImage = {
-            id: generateUUID(),
-            data: base64,
-            timestamp: Date.now(),
-          };
-          if (type === 'map') {
-            await saveMapGalleryImage(newImage);
-          } else {
-            await saveNineGridGalleryImage(newImage);
-          }
-          setImages(prev => [newImage, ...prev]);
-        };
-        reader.readAsDataURL(file);
+        // 检查是否需要压缩
+        const shouldCompress = compressionSettings.enableCompression && 
+          file.size > compressionSettings.compressionThreshold * 1024 * 1024;
+        
+        if (shouldCompress) {
+          // 调用父组件的压缩方法
+          onOpenCompressor(file);
+        } else {
+          // 直接处理图片文件
+          processImageFile(file);
+        }
       } else if (file.name.endsWith('.json')) {
         // 处理 JSON 文件（导出的数据）
         const reader = new FileReader();
@@ -217,6 +233,30 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         };
         reader.readAsText(file);
       }
+    }
+  };
+
+  const processImageFile = async (file: File, compressedBlob?: Blob) => {
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      const newImage: GalleryImage = {
+        id: generateUUID(),
+        data: base64,
+        timestamp: Date.now(),
+      };
+      if (type === 'map') {
+        await saveMapGalleryImage(newImage);
+      } else {
+        await saveNineGridGalleryImage(newImage);
+      }
+      setImages(prev => [newImage, ...prev]);
+    };
+    
+    if (compressedBlob) {
+      reader.readAsDataURL(compressedBlob);
+    } else {
+      reader.readAsDataURL(file);
     }
   };
 
@@ -324,6 +364,13 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             图库
           </h2>
           <div className="flex items-center gap-1">
+            <button 
+                onClick={onOpenSettings}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="设置"
+            >
+                <Settings size={16} />
+            </button>
              {images.length > 0 && (
                 <button 
                     onClick={handleClearAllClick}
@@ -450,6 +497,10 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         onConfirm={handleAlertClose}
         type="alert"
       />
+
+      {/* 图库设置模态框已移至 App.tsx 中，作为独立的模态框显示 */}
+
+      {/* 图片压缩模态框已移至父组件中，作为独立的模态框显示 */}
     </div>
   );
 };

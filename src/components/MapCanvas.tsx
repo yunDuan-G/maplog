@@ -723,6 +723,14 @@ export const MapCanvas: React.FC = () => {
         onFillWithImage={handleFillWithGalleryImage}
         hasActiveProvince={!!selectedId}
         type="map"
+        onOpenSettings={() => {
+          // 触发设置模态框的显示，由 App.tsx 处理
+          window.dispatchEvent(new CustomEvent('openGallerySettings'));
+        }}
+        onOpenCompressor={(file) => {
+          // 触发压缩模态框的显示，由 App.tsx 处理
+          window.dispatchEvent(new CustomEvent('openImageCompressor', { detail: { file, type: 'map' } }));
+        }}
       />
 
       {!showExportPreview && (
