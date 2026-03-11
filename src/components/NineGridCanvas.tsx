@@ -313,7 +313,7 @@ export const NineGridCanvas: React.FC = () => {
   // Calculate initial fit
   useEffect(() => {
     const fitGrid = () => {
-      const padding = 50;
+      const padding = 80;
       const gridTotalWidth = gridCols * CELL_WIDTH + (gridCols - 1) * gridSpacing;
       const gridTotalHeight = gridRows * CELL_HEIGHT + (gridRows - 1) * gridSpacing;
       
@@ -323,10 +323,10 @@ export const NineGridCanvas: React.FC = () => {
       const scale = Math.min(
         availableWidth / gridTotalWidth,
         availableHeight / gridTotalHeight
-      );
+      ) * 0.9;
       
       const x = (window.innerWidth - gridTotalWidth * scale) / 2;
-      const y = (window.innerHeight - gridTotalHeight * scale) / 2 + VIEW_CENTER_OFFSET_Y;
+      const y = (window.innerHeight - gridTotalHeight * scale) / 2;
 
       setBaseScale(scale);
       setViewState({ scale: 1, x, y });
@@ -337,7 +337,7 @@ export const NineGridCanvas: React.FC = () => {
     fitGrid();
     window.addEventListener('resize', fitGrid);
     return () => window.removeEventListener('resize', fitGrid);
-  }, [gridRows, gridCols]);
+  }, [gridRows, gridCols, gridSpacing]);
 
   const stageRef = useRef<any>(null);
   const mapContentRef = useRef<any>(null);
@@ -374,7 +374,7 @@ export const NineGridCanvas: React.FC = () => {
   };
 
   const handleResetView = () => {
-    const padding = 50;
+    const padding = 80;
     const gridTotalWidth = gridCols * CELL_WIDTH + (gridCols - 1) * gridSpacing;
     const gridTotalHeight = gridRows * CELL_HEIGHT + (gridRows - 1) * gridSpacing;
     
@@ -384,10 +384,10 @@ export const NineGridCanvas: React.FC = () => {
     const scale = Math.min(
       availableWidth / gridTotalWidth,
       availableHeight / gridTotalHeight
-    );
+    ) * 0.9;
 
     const x = (window.innerWidth - gridTotalWidth * scale) / 2;
-    const y = (window.innerHeight - gridTotalHeight * scale) / 2 + VIEW_CENTER_OFFSET_Y;
+    const y = (window.innerHeight - gridTotalHeight * scale) / 2;
 
     setBaseScale(scale);
     setViewState({
