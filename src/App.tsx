@@ -91,6 +91,8 @@ export default function App() {
           window['__compressCompleteCallback'](base64);
           delete window['__compressCompleteCallback'];
         }
+        // 触发自定义事件，通知图库组件刷新
+        window.dispatchEvent(new CustomEvent('galleryImagesUpdated', { detail: { type: currentCompressType } }));
         setShowImageCompressor(false);
         setCurrentCompressFile(null);
       };

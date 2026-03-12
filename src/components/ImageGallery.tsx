@@ -67,11 +67,21 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       loadCompressionSettings();
     };
     
+    // 监听自定义事件，实时更新图片列表
+    const handleImagesUpdated = (event: CustomEvent) => {
+      const { type: eventType } = event.detail;
+      if (!eventType || eventType === type) {
+        loadImages();
+      }
+    };
+    
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('gallerySettingsUpdated', handleSettingsUpdated);
+    window.addEventListener('galleryImagesUpdated', handleImagesUpdated as EventListener);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('gallerySettingsUpdated', handleSettingsUpdated);
+      window.removeEventListener('galleryImagesUpdated', handleImagesUpdated as EventListener);
     };
   }, [type]);
 
