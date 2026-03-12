@@ -447,12 +447,16 @@ export const MapCanvas: React.FC = () => {
     // Handle file drop
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
-        fillProvinceWithImage(provinceId, base64, bounds || undefined);
-      };
-      reader.readAsDataURL(file);
+      // 触发压缩模态框
+      window.dispatchEvent(new CustomEvent('openImageCompressor', { 
+        detail: { 
+          file, 
+          type: 'map' as const, 
+          onComplete: (compressedBase64: string) => {
+            fillProvinceWithImage(provinceId!, compressedBase64, bounds || undefined);
+          }
+        } 
+      }));
     }
   };
 

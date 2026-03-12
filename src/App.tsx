@@ -41,15 +41,18 @@ export default function App() {
   // 监听来自子组件的压缩事件
   useEffect(() => {
     const handleOpenCompressor = (event: CustomEvent) => {
-      const { file, type } = event.detail;
+      const { file, type, onComplete } = event.detail;
       setCurrentCompressFile(file);
       setCurrentCompressType(type);
       setShowImageCompressor(true);
+      // 保存回调函数
+      window['__compressCompleteCallback'] = onComplete;
     };
 
     window.addEventListener('openImageCompressor', handleOpenCompressor as EventListener);
     return () => {
       window.removeEventListener('openImageCompressor', handleOpenCompressor as EventListener);
+      delete window['__compressCompleteCallback'];
     };
   }, []);
 
@@ -82,6 +85,11 @@ export default function App() {
           await saveMapGalleryImage(newImage);
         } else {
           await saveNineGridGalleryImage(newImage);
+        }
+        // 调用回调函数（如果存在）
+        if (window['__compressCompleteCallback']) {
+          window['__compressCompleteCallback'](base64);
+          delete window['__compressCompleteCallback'];
         }
         setShowImageCompressor(false);
         setCurrentCompressFile(null);
