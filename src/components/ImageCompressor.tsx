@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface ImageCompressorProps {
   onCompress: (compressedBlob: Blob) => void;
@@ -17,6 +17,24 @@ export const ImageCompressor: React.FC<ImageCompressorProps> = ({
   const [compressedSize, setCompressedSize] = useState<number>(0);
   const [originalSize, setOriginalSize] = useState<number>(0);
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
+
+  // 从本地存储加载压缩设置
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('gallerySettings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        if (settings.compressionQuality !== undefined) {
+          setQuality(settings.compressionQuality);
+        }
+        if (settings.maxWidth !== undefined) {
+          setMaxWidth(settings.maxWidth);
+        }
+      } catch (error) {
+        console.error('加载压缩设置失败:', error);
+      }
+    }
+  }, []);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
