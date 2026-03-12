@@ -777,7 +777,7 @@ export const MapCanvas: React.FC = () => {
 
       {/* 导出设置窗口 */}
       {showExportSettings && (
-        <div
+        <div 
           ref={panelRef}
           style={{
             position: 'absolute',
@@ -786,7 +786,7 @@ export const MapCanvas: React.FC = () => {
             transform: 'translate(-50%, -50%)',
             zIndex: 50
           }}
-          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[450px] h-[90vh] max-h-[700px]"
+          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[450px] h-[80vh] max-h-[600px]"
         >
             <div
               className="flex items-center justify-between mb-4 flex-shrink-0 w-full"
@@ -957,7 +957,7 @@ export const MapCanvas: React.FC = () => {
 
       {/* 导出预览窗口 */}
       {showExportPreview && (
-        <div
+        <div 
           style={{
             position: 'absolute',
             left: '50%',
@@ -965,7 +965,7 @@ export const MapCanvas: React.FC = () => {
             transform: 'translate(-50%, -50%)',
             zIndex: 50
           }}
-          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[600px] h-[90vh] max-h-[700px] flex flex-col"
+          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[600px] h-[80vh] max-h-[600px] flex flex-col"
         >
             <div
               className="flex items-center justify-between mb-4 flex-shrink-0 w-full"
