@@ -5,6 +5,7 @@ import { Toolbar } from './Toolbar';
 import { ImageGallery } from './ImageGallery';
 import { useMapState } from '../hooks/useMapState';
 import useImage from 'use-image';
+import { saveNineGridGalleryImage } from '../services/db';
 
 // GridCell component for rendering individual grid cells
 interface GridCellProps {
@@ -257,6 +258,20 @@ const GRID_SPACING = 20;
 
 const VIEW_CENTER_OFFSET_Y = 110;
 
+// 生成唯一ID的函数
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  } else {
+    // fallback方法生成UUID
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+};
+
 export const NineGridCanvas: React.FC = () => {
   const { states, updateProvince, resetProvince, resetAll, setAllStates } = useMapState('ninegrid');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -284,6 +299,12 @@ export const NineGridCanvas: React.FC = () => {
     const savedCols = localStorage.getItem('gridCols');
     return savedCols ? parseInt(savedCols) : 3;
   });
+  const [compressionSettings, setCompressionSettings] = useState({
+    enableCompression: false,
+    compressionThreshold: 1, // 单位：MB
+    compressionQuality: 0.7,
+    maxWidth: 1920
+  });
 
   // Viewport state（相对于 baseScale 的缩放）
   const [viewState, setViewState] = useState({
@@ -292,6 +313,33 @@ export const NineGridCanvas: React.FC = () => {
     y: 0,
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // 加载压缩设置
+  const loadCompressionSettings = () => {
+    const savedSettings = localStorage.getItem('gallerySettings');
+    if (savedSettings) {
+      try {
+        setCompressionSettings(JSON.parse(savedSettings));
+      } catch (error) {
+        console.error('加载压缩设置失败:', error);
+      }
+    }
+  };
+
+  // 组件挂载时加载设置
+  useEffect(() => {
+    loadCompressionSettings();
+    
+    // 监听设置变化
+    const handleSettingsUpdated = () => {
+      loadCompressionSettings();
+    };
+    
+    window.addEventListener('gallerySettingsUpdated', handleSettingsUpdated);
+    return () => {
+      window.removeEventListener('gallerySettingsUpdated', handleSettingsUpdated);
+    };
+  }, []);
   
   // Reset hoveredId when selectedId changes
   useEffect(() => {
@@ -672,12 +720,40 @@ export const NineGridCanvas: React.FC = () => {
     // Handle file drop
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
-        fillCellWithImage(cellId, base64);
-      };
-      reader.readAsDataURL(file);
+      // 检查是否需要压缩
+      const shouldCompress = compressionSettings.enableCompression && 
+        file.size > compressionSettings.compressionThreshold * 1024 * 1024;
+      
+      if (shouldCompress) {
+        // 触发压缩模态框
+        window.dispatchEvent(new CustomEvent('openImageCompressor', { 
+          detail: { 
+            file, 
+            type: 'ninegrid' as const, 
+            onComplete: (compressedBase64: string) => {
+              fillCellWithImage(cellId!, compressedBase64);
+            }
+          } 
+        }));
+      } else {
+        // 直接处理图片文件
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64 = event.target?.result as string;
+          // 填充到格子
+          fillCellWithImage(cellId!, base64);
+          // 保存到图库
+          const newImage = {
+            id: generateUUID(),
+            data: base64,
+            timestamp: Date.now(),
+          };
+          await saveNineGridGalleryImage(newImage);
+          // 触发事件通知图库刷新
+          window.dispatchEvent(new CustomEvent('galleryImagesUpdated', { detail: { type: 'ninegrid' } }));
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
