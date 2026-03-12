@@ -138,9 +138,6 @@ export const MapCanvas: React.FC = () => {
   const [showExportTitle, setShowExportTitle] = useState(true);
   const [showExportSubtitle, setShowExportSubtitle] = useState(true);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
   const [compressionSettings, setCompressionSettings] = useState({
     enableCompression: false,
     compressionThreshold: 1, // 单位：MB
@@ -148,7 +145,6 @@ export const MapCanvas: React.FC = () => {
     maxWidth: 1920
   });
   const panelRef = useRef<HTMLDivElement>(null);
-  const positionRef = useRef({ x: 0, y: 0 });
 
   // Viewport state（相对于 baseScale 的缩放）
   const [viewState, setViewState] = useState({
@@ -313,11 +309,6 @@ export const MapCanvas: React.FC = () => {
   };
   
   const handleExportClick = () => {
-    // Reset panel position to center of screen
-    setPanelPosition({
-      x: window.innerWidth / 2 - 550, // 550 is half of 1100px
-      y: window.innerHeight / 2 - 350 // Approximate half height
-    });
     setShowExportPreview(true);
     setExportStep('edit');
     setPreviewImage(null);
@@ -699,53 +690,7 @@ export const MapCanvas: React.FC = () => {
     setIsPinching(false);
   };
 
-  // Drag handling for export panel
-  const handleDragStart = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    setDragOffset({
-      x: e.clientX - panelPosition.x,
-      y: e.clientY - panelPosition.y
-    });
-    positionRef.current = { ...panelPosition };
-  }, [panelPosition]);
 
-  const handleDragMove = React.useCallback((e: MouseEvent) => {
-    if (!isDragging || !panelRef.current) return;
-    
-    // Calculate new position
-    const newX = e.clientX - dragOffset.x;
-    const newY = e.clientY - dragOffset.y;
-    
-    // Update ref for final position
-    positionRef.current = { x: newX, y: newY };
-    
-    // Directly update DOM for smooth movement (hardware accelerated)
-    // Use requestAnimationFrame for even smoother performance
-    requestAnimationFrame(() => {
-      if (panelRef.current) {
-        panelRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
-      }
-    });
-  }, [isDragging, dragOffset]);
-
-  const handleDragEnd = React.useCallback(() => {
-    // Update React state only at the end of drag
-    setPanelPosition(positionRef.current);
-    setIsDragging(false);
-  }, []);
-
-  // Add global mouse move and up listeners when dragging
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleDragMove);
-      document.addEventListener('mouseup', handleDragEnd);
-      return () => {
-        document.removeEventListener('mousemove', handleDragMove);
-        document.removeEventListener('mouseup', handleDragEnd);
-      };
-    }
-  }, [isDragging, handleDragMove, handleDragEnd]);
 
   const handleTouchStart = (e: any) => {
     const stage = stageRef.current;
@@ -835,23 +780,21 @@ export const MapCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Export Preview Panel - Draggable */}
+      {/* Export Preview Panel */}
       {showExportPreview && (
         <div 
           ref={panelRef}
           style={{
             position: 'absolute',
-            left: 0,
-            top: 0,
-            transform: `translate(${panelPosition.x}px, ${panelPosition.y}px)`,
-            zIndex: 50,
-            transition: 'transform 0s' // Disable transition for dragging
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 50
           }}
           className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[1100px] h-[700px] flex"
         >
             <div 
-              className="flex items-center justify-between mb-4 flex-shrink-0 cursor-move w-full absolute top-6 left-6 right-6"
-              onMouseDown={handleDragStart}
+              className="flex items-center justify-between mb-4 flex-shrink-0 w-full absolute top-6 left-6 right-6"
             >
                 <h2 className="text-lg font-medium text-gray-800 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
