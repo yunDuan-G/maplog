@@ -126,6 +126,12 @@ export const MapCanvas: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
+  const [compressionSettings, setCompressionSettings] = useState({
+    enableCompression: false,
+    compressionThreshold: 1, // 单位：MB
+    compressionQuality: 0.7,
+    maxWidth: 1920
+  });
   const panelRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef({ x: 0, y: 0 });
 
@@ -136,6 +142,33 @@ export const MapCanvas: React.FC = () => {
     y: 0,
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // 加载压缩设置
+  const loadCompressionSettings = () => {
+    const savedSettings = localStorage.getItem('gallerySettings');
+    if (savedSettings) {
+      try {
+        setCompressionSettings(JSON.parse(savedSettings));
+      } catch (error) {
+        console.error('加载压缩设置失败:', error);
+      }
+    }
+  };
+
+  // 组件挂载时加载设置
+  useEffect(() => {
+    loadCompressionSettings();
+    
+    // 监听设置变化
+    const handleSettingsUpdated = () => {
+      loadCompressionSettings();
+    };
+    
+    window.addEventListener('gallerySettingsUpdated', handleSettingsUpdated);
+    return () => {
+      window.removeEventListener('gallerySettingsUpdated', handleSettingsUpdated);
+    };
+  }, []);
 
   // 不再需要监听数据更新事件，由用户确认后手动刷新
 
@@ -465,16 +498,30 @@ export const MapCanvas: React.FC = () => {
     // Handle file drop
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
-      // 触发压缩模态框
-      window.dispatchEvent(new CustomEvent('openImageCompressor', { 
-        detail: { 
-          file, 
-          type: 'map' as const, 
-          onComplete: (compressedBase64: string) => {
-            fillProvinceWithImage(provinceId!, compressedBase64, bounds || undefined);
-          }
-        } 
-      }));
+      // 检查是否需要压缩
+      const shouldCompress = compressionSettings.enableCompression && 
+        file.size > compressionSettings.compressionThreshold * 1024 * 1024;
+      
+      if (shouldCompress) {
+        // 触发压缩模态框
+        window.dispatchEvent(new CustomEvent('openImageCompressor', { 
+          detail: { 
+            file, 
+            type: 'map' as const, 
+            onComplete: (compressedBase64: string) => {
+              fillProvinceWithImage(provinceId!, compressedBase64, bounds || undefined);
+            }
+          } 
+        }));
+      } else {
+        // 直接处理图片文件
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64 = event.target?.result as string;
+          fillProvinceWithImage(provinceId!, base64, bounds || undefined);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
