@@ -24,7 +24,7 @@ const calculatePathBounds = (path: string) => {
     if (!numbers || numbers.length < 2) return null;
 
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    
+
     // Most commands in the path string are pairs of coordinates.
     // We iterate by 2, assuming x, y pairs.
     for (let i = 0; i < numbers.length; i += 2) {
@@ -32,7 +32,7 @@ const calculatePathBounds = (path: string) => {
         // Ensure y exists (if odd number of coordinates, skip last)
         if (i + 1 >= numbers.length) break;
         const y = numbers[i+1];
-        
+
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -55,7 +55,7 @@ const calculatePathBounds = (path: string) => {
 const calculateExportDimensions = (aspectRatio: '16:9' | '4:3' | '4:5' | 'original') => {
     const baseWidth = BASE_EXPORT_WIDTH;
     const baseHeight = BASE_EXPORT_HEIGHT;
-    
+
     switch (aspectRatio) {
         case '16:9':
             return {
@@ -88,10 +88,10 @@ const calculateImageSize = (base64: string) => {
   // 移除base64前缀
   const base64Data = base64.split(',')[1];
   if (!base64Data) return '0 KB';
-  
+
   // 计算字节大小：base64编码的字符串每4个字符代表3个字节
   const bytes = (base64Data.length * 3) / 4;
-  
+
   if (bytes < 1024) {
     return `${Math.round(bytes)} B`;
   } else if (bytes < 1024 * 1024) {
@@ -124,7 +124,6 @@ export const MapCanvas: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportTitle, setExportTitle] = useState('旅行拼图');
   const [exportSubtitle, setExportSubtitle] = useState('Imprint China · 旅行照片拼图');
-  const [showExportPreview, setShowExportPreview] = useState(false);
   const [exportStep, setExportStep] = useState<'edit' | 'preview'>('edit');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -138,6 +137,8 @@ export const MapCanvas: React.FC = () => {
   const [showExportTitle, setShowExportTitle] = useState(true);
   const [showExportSubtitle, setShowExportSubtitle] = useState(true);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [showExportSettings, setShowExportSettings] = useState(false);
+  const [showExportPreview, setShowExportPreview] = useState(false);
   const [compressionSettings, setCompressionSettings] = useState({
     enableCompression: false,
     compressionThreshold: 1, // 单位：MB
@@ -169,12 +170,12 @@ export const MapCanvas: React.FC = () => {
   // 组件挂载时加载设置
   useEffect(() => {
     loadCompressionSettings();
-    
+
     // 监听设置变化
     const handleSettingsUpdated = () => {
       loadCompressionSettings();
     };
-    
+
     window.addEventListener('gallerySettingsUpdated', handleSettingsUpdated);
     return () => {
       window.removeEventListener('gallerySettingsUpdated', handleSettingsUpdated);
@@ -189,12 +190,12 @@ export const MapCanvas: React.FC = () => {
       const padding = 50;
       const availableWidth = window.innerWidth - padding * 2;
       const availableHeight = window.innerHeight - padding * 2;
-      
+
       const scale = Math.min(
         availableWidth / MAP_WIDTH,
         availableHeight / MAP_HEIGHT
       );
-      
+
       const x = (window.innerWidth - MAP_WIDTH * scale) / 2;
       const y = (window.innerHeight - MAP_HEIGHT * scale) / 2 + VIEW_CENTER_OFFSET_Y;
 
@@ -263,7 +264,7 @@ export const MapCanvas: React.FC = () => {
       y,
     });
   };
-  
+
   const handleToggleGallery = () => {
     setIsGalleryOpen(prev => !prev);
   };
@@ -307,18 +308,12 @@ export const MapCanvas: React.FC = () => {
     };
     img.src = image;
   };
-  
+
   const handleExportClick = () => {
-    setShowExportPreview(true);
-    setExportStep('edit');
+    setShowExportSettings(true);
     setPreviewImage(null);
     setSelectedId(null);
     setIsEditing(false);
-    
-    // Auto generate preview when opening export panel
-    setTimeout(() => {
-      handleGeneratePreview();
-    }, 100);
   };
 
   const handleDeleteCurrentProvinceImage = () => {
@@ -351,7 +346,7 @@ export const MapCanvas: React.FC = () => {
 
     setIsExporting(true);
     setIsGeneratingPreview(true);
-    
+
     setTimeout(() => {
         const stage = stageRef.current;
 
@@ -365,7 +360,7 @@ export const MapCanvas: React.FC = () => {
         stage.batchDraw();
 
         const exportDimensions = calculateExportDimensions(exportAspectRatio);
-        const uri = stage.toDataURL({ 
+        const uri = stage.toDataURL({
             pixelRatio: 3,
             x: 0,
             y: 0,
@@ -393,7 +388,7 @@ export const MapCanvas: React.FC = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         setShowExportPreview(false);
         setExportStep('edit');
         handleResetView();
@@ -404,14 +399,14 @@ export const MapCanvas: React.FC = () => {
     // 获取地图图库中的所有图片
     const { getAllMapGalleryImages } = await import('../services/db');
     const galleryImages = await getAllMapGalleryImages();
-    
+
     const data = {
       type: 'map',
       timestamp: Date.now(),
       states: states,
       galleryImages: galleryImages
     };
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -426,29 +421,29 @@ export const MapCanvas: React.FC = () => {
     reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        
+
         // 确保数据类型正确
         if (data.type !== 'map') {
           alert('导入失败，请选择地图类型的存档文件');
           return;
         }
-        
+
         // 导入排版数据
         await setAllStates(data.states || {});
-        
+
         // 导入图库图片
         if (data.galleryImages && Array.isArray(data.galleryImages)) {
           const { saveMapGalleryImage, clearMapGallery } = await import('../services/db');
-          
+
           // 清空现有图库
           await clearMapGallery();
-          
+
           // 保存导入的图片
           for (const image of data.galleryImages) {
             await saveMapGalleryImage(image);
           }
         }
-        
+
         alert('导入成功！');
       } catch (err) {
         alert('导入失败，请检查文件格式');
@@ -463,21 +458,21 @@ export const MapCanvas: React.FC = () => {
   const handleFileDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOverId(null);
-    
+
     const stage = stageRef.current;
     if (!stage) return;
-    
+
     stage.setPointersPositions(e);
     const pos = stage.getPointerPosition();
     if (!pos) return;
 
     const hit = stage.getIntersection(pos);
     if (!hit) return;
-    
+
     // Find the province group
     let node = hit;
     let provinceId: string | undefined;
-    
+
     while (node && node !== stage) {
         const id = node.id();
         if (id && PROVINCE_CONFIGS.find(p => p.id === id)) {
@@ -488,7 +483,7 @@ export const MapCanvas: React.FC = () => {
         if (!parent) break;
         node = parent;
     }
-    
+
     if (!provinceId) return;
 
     const provinceConfig = PROVINCE_CONFIGS.find(p => p.id === provinceId);
@@ -505,19 +500,19 @@ export const MapCanvas: React.FC = () => {
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       // 检查是否需要压缩
-      const shouldCompress = compressionSettings.enableCompression && 
+      const shouldCompress = compressionSettings.enableCompression &&
         file.size > compressionSettings.compressionThreshold * 1024 * 1024;
-      
+
       if (shouldCompress) {
         // 触发压缩模态框
-        window.dispatchEvent(new CustomEvent('openImageCompressor', { 
-          detail: { 
-            file, 
-            type: 'map' as const, 
+        window.dispatchEvent(new CustomEvent('openImageCompressor', {
+          detail: {
+            file,
+            type: 'map' as const,
             onComplete: (compressedBase64: string) => {
               fillProvinceWithImage(provinceId!, compressedBase64, bounds || undefined);
             }
-          } 
+          }
         }));
       } else {
         // 直接处理图片文件
@@ -545,7 +540,7 @@ export const MapCanvas: React.FC = () => {
       e.preventDefault();
       const stage = stageRef.current;
       if (!stage) return;
-      
+
       stage.setPointersPositions(e);
       const pos = stage.getPointerPosition();
       if (!pos) {
@@ -562,7 +557,7 @@ export const MapCanvas: React.FC = () => {
       // Find the province group
       let node = hit;
       let provinceId: string | undefined;
-      
+
       while (node && node !== stage) {
           const id = node.id();
           if (id && PROVINCE_CONFIGS.find(p => p.id === id)) {
@@ -748,12 +743,12 @@ export const MapCanvas: React.FC = () => {
   };
 
   return (
-    <div 
+    <div
       className="relative w-full h-screen bg-[#F5F5F7] flex flex-col items-center justify-center overflow-hidden font-sans"
       onDragOver={handleDragOver}
       onDrop={handleFileDrop}
     >
-      <ImageGallery 
+      <ImageGallery
         isOpen={isGalleryOpen}
         onClose={() => setIsGalleryOpen(false)}
         onDragStart={(e, image) => {
@@ -780,9 +775,9 @@ export const MapCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Export Preview Panel */}
-      {showExportPreview && (
-        <div 
+      {/* 导出设置窗口 */}
+      {showExportSettings && (
+        <div
           ref={panelRef}
           style={{
             position: 'absolute',
@@ -791,18 +786,18 @@ export const MapCanvas: React.FC = () => {
             transform: 'translate(-50%, -50%)',
             zIndex: 50
           }}
-          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[1100px] h-[700px] flex"
+          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[450px] h-[90vh] max-h-[700px]"
         >
-            <div 
-              className="flex items-center justify-between mb-4 flex-shrink-0 w-full absolute top-6 left-6 right-6"
+            <div
+              className="flex items-center justify-between mb-4 flex-shrink-0 w-full"
             >
                 <h2 className="text-lg font-medium text-gray-800 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    导出设置与预览
+                    导出设置
                 </h2>
-                <button 
+                <button
                     onClick={() => {
-                        setShowExportPreview(false);
+                        setShowExportSettings(false);
                         handleResetView();
                     }}
                     className="text-gray-400 hover:text-gray-600"
@@ -810,176 +805,218 @@ export const MapCanvas: React.FC = () => {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            
-            {/* 左侧设置区域 */}
-            <div className="w-96 pt-16 pr-6 border-r border-gray-200">
-                <div className="space-y-4 mb-6">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">主标题</label>
-                        <input 
-                            type="text" 
-                            value={exportTitle}
-                            onChange={(e) => setExportTitle(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-light tracking-widest transition-all"
-                            placeholder="输入主标题..."
+
+            <div className="space-y-4 mb-6">
+                <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">主标题</label>
+                    <input
+                        type="text"
+                        value={exportTitle}
+                        onChange={(e) => setExportTitle(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-light tracking-widest transition-all"
+                        placeholder="输入主标题..."
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">副标题</label>
+                    <input
+                        type="text"
+                        value={exportSubtitle}
+                        onChange={(e) => setExportSubtitle(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs tracking-widest uppercase transition-all"
+                        placeholder="输入副标题..."
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">显示设置</label>
+                    <div className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            id="singleProvince"
+                            checked={showSingleProvince}
+                            onChange={(e) => {
+                                setShowSingleProvince(e.target.checked);
+                                if (!e.target.checked) {
+                                    setExportAspectRatio('original');
+                                }
+                            }}
+                            className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
                         />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">副标题</label>
-                        <input 
-                            type="text" 
-                            value={exportSubtitle}
-                            onChange={(e) => setExportSubtitle(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs tracking-widest uppercase transition-all"
-                            placeholder="输入副标题..."
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">显示设置</label>
-                        <div className="flex items-center space-x-2">
-                            <input 
-                                type="checkbox" 
-                                id="singleProvince" 
-                                checked={showSingleProvince}
-                                onChange={(e) => {
-                                    setShowSingleProvince(e.target.checked);
-                                    if (!e.target.checked) {
-                                        setExportAspectRatio('original');
-                                    }
-                                }}
-                                className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
-                            />
-                            <label htmlFor="singleProvince" className="text-sm text-gray-600">只显示单个省份</label>
-                        </div>
-                        {showSingleProvince && (
-                            <div className="mt-2">
-                                <select 
-                                    value={singleProvinceId || ''}
-                                    onChange={(e) => setSingleProvinceId(e.target.value || null)}
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-                                >
-                                    <option value="">选择省份</option>
-                                    {PROVINCE_CONFIGS.map((config) => (
-                                        <option key={config.id} value={config.id}>
-                                            {PROVINCE_NAMES[config.id] || config.id}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
+                        <label htmlFor="singleProvince" className="text-sm text-gray-600">只显示单个省份</label>
                     </div>
                     {showSingleProvince && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">图片比例</label>
-                            <select 
-                                value={exportAspectRatio}
-                                onChange={(e) => setExportAspectRatio(e.target.value as '16:9' | '4:3' | '4:5' | 'original')}
+                        <div className="mt-2">
+                            <select
+                                value={singleProvinceId || ''}
+                                onChange={(e) => setSingleProvinceId(e.target.value || null)}
                                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
                             >
-                                <option value="original">原始比例</option>
-                                <option value="16:9">16:9</option>
-                                <option value="4:3">4:3</option>
-                                <option value="4:5">4:5</option>
+                                <option value="">选择省份</option>
+                                {PROVINCE_CONFIGS.map((config) => (
+                                    <option key={config.id} value={config.id}>
+                                        {PROVINCE_NAMES[config.id] || config.id}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     )}
+                </div>
+                {showSingleProvince && (
                     <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">标题显示</label>
-                        <div className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                                <input 
-                                    type="checkbox" 
-                                    id="showExportTitle" 
-                                    checked={showExportTitle}
-                                    onChange={(e) => setShowExportTitle(e.target.checked)}
-                                    className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
-                                />
-                                <label htmlFor="showExportTitle" className="text-sm text-gray-600">显示主标题</label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <input 
-                                    type="checkbox" 
-                                    id="showExportSubtitle" 
-                                    checked={showExportSubtitle}
-                                    onChange={(e) => setShowExportSubtitle(e.target.checked)}
-                                    className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
-                                />
-                                <label htmlFor="showExportSubtitle" className="text-sm text-gray-600">显示副标题</label>
-                            </div>
-                        </div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">图片比例</label>
+                        <select
+                            value={exportAspectRatio}
+                            onChange={(e) => setExportAspectRatio(e.target.value as '16:9' | '4:3' | '4:5' | 'original')}
+                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
+                        >
+                            <option value="original">原始比例</option>
+                            <option value="16:9">16:9</option>
+                            <option value="4:3">4:3</option>
+                            <option value="4:5">4:5</option>
+                        </select>
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">背景颜色</label>
-                        <div className="flex flex-wrap gap-2">
-                            {[
-                                { name: '白色', value: '#FFFFFF' },
-                                { name: '灰色', value: '#F5F5F5' },
-                                { name: '米色', value: '#FFF8E1' },
-                                { name: '黑色', value: '#000000' }
-                            ].map((color) => (
-                                <button
-                                    key={color.value}
-                                    onClick={() => setExportBackgroundColor(color.value)}
-                                    className={`w-10 h-10 rounded-full border-2 transition-all ${exportBackgroundColor === color.value ? 'border-blue-500 scale-110' : 'border-gray-200'}`}
-                                    style={{ backgroundColor: color.value }}
-                                    title={color.name}
-                                />
-                            ))}
+                )}
+                <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">标题显示</label>
+                    <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="showExportTitle"
+                                checked={showExportTitle}
+                                onChange={(e) => setShowExportTitle(e.target.checked)}
+                                className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
+                            />
+                            <label htmlFor="showExportTitle" className="text-sm text-gray-600">显示主标题</label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="showExportSubtitle"
+                                checked={showExportSubtitle}
+                                onChange={(e) => setShowExportSubtitle(e.target.checked)}
+                                className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
+                            />
+                            <label htmlFor="showExportSubtitle" className="text-sm text-gray-600">显示副标题</label>
                         </div>
                     </div>
                 </div>
-
-                <div className="flex gap-3">
-                    <button 
-                        onClick={() => {
-                            setShowExportPreview(false);
-                            handleResetView();
-                        }}
-                        className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium"
-                    >
-                        取消
-                    </button>
-                    <button 
-                        onClick={() => {
-                            // Trigger preview generation
-                            setIsExporting(true); // Temporarily show text on map
-                            // Use timeout to ensure render cycle completes
-                            setTimeout(handleGeneratePreview, 50);
-                        }}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-black text-white hover:bg-gray-800 active:scale-95 transition-all shadow-lg text-sm font-medium flex items-center justify-center gap-2"
-                    >
-                        <span>更新预览</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                    </button>
+                <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">背景颜色</label>
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            { name: '白色', value: '#FFFFFF' },
+                            { name: '灰色', value: '#F5F5F5' },
+                            { name: '米色', value: '#FFF8E1' },
+                            { name: '黑色', value: '#000000' }
+                        ].map((color) => (
+                            <button
+                                key={color.value}
+                                onClick={() => setExportBackgroundColor(color.value)}
+                                className={`w-10 h-10 rounded-full border-2 transition-all ${exportBackgroundColor === color.value ? 'border-blue-500 scale-110' : 'border-gray-200'}`}
+                                style={{ backgroundColor: color.value }}
+                                title={color.name}
+                            />
+                        ))}
+                    </div>
                 </div>
-                
-                <p className="text-center text-[10px] text-gray-400 mt-4">
-                    预览模式下背景为白色，导出将包含当前视图内容
-                </p>
             </div>
-            
-            {/* 右侧预览区域 */}
-            <div className="flex-1 pt-16 pl-6 flex flex-col">
-                <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center mb-6 relative group">
-                    {isGeneratingPreview ? (
-                        <div className="animate-pulse flex flex-col items-center text-gray-400">
-                            <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-4"></div>
-                            <span className="text-sm">正在生成预览...</span>
-                        </div>
-                    ) : previewImage ? (
-                        <img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain shadow-lg" />
-                    ) : (
-                        <div className="animate-pulse flex flex-col items-center text-gray-400">
-                            <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-4"></div>
-                            <span className="text-sm">点击更新预览...</span>
-                        </div>
-                    )}
-                </div>
-                
-                <button 
-                    onClick={handleConfirmExport}
+
+            <div className="flex gap-3">
+                <button
+                    onClick={() => {
+                        setShowExportSettings(false);
+                        handleResetView();
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium"
+                >
+                    取消
+                </button>
+                <button
+                    onClick={() => {
+                        // Trigger preview generation
+                        setIsExporting(true); // Temporarily show text on map
+                        // Use timeout to ensure render cycle completes
+                        setTimeout(() => {
+                            handleGeneratePreview();
+                            setShowExportPreview(true);
+                        }, 50);
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-black text-white hover:bg-gray-800 active:scale-95 transition-all shadow-lg text-sm font-medium flex items-center justify-center gap-2"
+                >
+                    <span>生成预览</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                </button>
+            </div>
+
+            <p className="text-center text-[10px] text-gray-400 mt-4">
+                预览模式下背景为白色，导出将包含当前视图内容
+            </p>
+        </div>
+      )}
+
+      {/* 导出预览窗口 */}
+      {showExportPreview && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 50
+          }}
+          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[600px] h-[90vh] max-h-[700px] flex flex-col"
+        >
+            <div
+              className="flex items-center justify-between mb-4 flex-shrink-0 w-full"
+            >
+                <h2 className="text-lg font-medium text-gray-800 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    导出预览
+                </h2>
+                <button
+                    onClick={() => {
+                        setShowExportPreview(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center mb-6 relative group">
+                {isGeneratingPreview ? (
+                    <div className="animate-pulse flex flex-col items-center text-gray-400">
+                        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-4"></div>
+                        <span className="text-sm">正在生成预览...</span>
+                    </div>
+                ) : previewImage ? (
+                    <img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain shadow-lg" />
+                ) : (
+                    <div className="animate-pulse flex flex-col items-center text-gray-400">
+                        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-4"></div>
+                        <span className="text-sm">点击生成预览...</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex gap-3">
+                <button
+                    onClick={() => {
+                        setShowExportPreview(false);
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium"
+                >
+                    返回设置
+                </button>
+                <button
+                    onClick={() => {
+                        handleConfirmExport();
+                        setShowExportPreview(false);
+                        setShowExportSettings(false);
+                    }}
                     disabled={!previewImage}
-                    className={`w-full px-4 py-2.5 rounded-xl ${previewImage ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} active:scale-95 transition-all shadow-lg text-sm font-medium flex items-center justify-center gap-2`}
+                    className={`flex-1 px-4 py-2.5 rounded-xl ${previewImage ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} active:scale-95 transition-all shadow-lg text-sm font-medium flex items-center justify-center gap-2`}
                 >
                     <span>确认导出图片</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -1004,7 +1041,7 @@ export const MapCanvas: React.FC = () => {
       )}
 
       {!(isMobile && isGalleryOpen) && (
-        <Toolbar 
+        <Toolbar
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onResetView={handleResetView}
@@ -1077,13 +1114,13 @@ export const MapCanvas: React.FC = () => {
                 {(() => {
                     const exportDimensions = calculateExportDimensions(exportAspectRatio);
                     return (
-                        <Rect 
-                            x={0} 
-                            y={0} 
-                            width={exportDimensions.width} 
-                            height={exportDimensions.height} 
-                            fill={exportBackgroundColor} 
-                            visible={isExporting || showExportPreview} 
+                        <Rect
+                            x={0}
+                            y={0}
+                            width={exportDimensions.width}
+                            height={exportDimensions.height}
+                            fill={exportBackgroundColor}
+                            visible={isExporting || showExportPreview}
                         />
                     );
                 })()}
@@ -1120,7 +1157,7 @@ export const MapCanvas: React.FC = () => {
                                 )}
                             </Group>
                         )}
-                    
+
                     {/* Nine-Dash Line & Provinces - Offset Group */}
                     {(() => {
                         // 当只显示单个省份时，计算其边界并调整位置和缩放
@@ -1133,18 +1170,18 @@ export const MapCanvas: React.FC = () => {
                                     // 计算居中位置
                                     const centerX = exportDimensions.width / 2;
                                     const centerY = exportDimensions.height / 2;
-                                    
+
                                     // 计算缩放比例，使省份占据图片的主要位置
                                     const maxDimension = Math.max(bounds.width, bounds.height);
                                     const exportArea = Math.min(exportDimensions.width, exportDimensions.height) * 0.7; // 70% of the export area
                                     const scale = exportArea / maxDimension;
-                                    
+
                                     // 计算位置偏移，使省份居中
                                     const x = centerX - (bounds.centerX * scale);
                                     const y = centerY - (bounds.centerY * scale);
-                                    
+
                                     return (
-                                        <Group 
+                                        <Group
                                             x={x}
                                             y={y}
                                             scaleX={scale}
@@ -1182,11 +1219,11 @@ export const MapCanvas: React.FC = () => {
                                 }
                             }
                         }
-                        
+
                         // 默认情况：显示所有省份
                         return (
-                            <Group 
-                                x={(isExporting || showExportPreview) ? MAP_OFFSET_X : 0} 
+                            <Group
+                                x={(isExporting || showExportPreview) ? MAP_OFFSET_X : 0}
                                 y={(isExporting || showExportPreview) ? MAP_OFFSET_Y : 0}
                                 scaleX={(isExporting || showExportPreview) ? EXPORT_MAP_SCALE : 1}
                                 scaleY={(isExporting || showExportPreview) ? EXPORT_MAP_SCALE : 1}
@@ -1219,7 +1256,7 @@ export const MapCanvas: React.FC = () => {
                                         />
                                     );
                                 })}
-                                
+
                                 {/* Nine-Dash Line */}
                                 {NINE_DASH_PATHS.map((path, index) => (
                                     <Path
@@ -1243,8 +1280,8 @@ export const MapCanvas: React.FC = () => {
         <p>拖拽或点击图片填充 · 滚轮缩放 · 拖拽平移</p>
         {selectedId && (
           <p className="mt-1 text-xs text-emerald-500 whitespace-nowrap">
-            已选中：{PROVINCE_NAMES[selectedId] || '某个省份'} 
-            {states[selectedId]?.image && `· 图片大小：${calculateImageSize(states[selectedId].image)}`} 
+            已选中：{PROVINCE_NAMES[selectedId] || '某个省份'}
+            {states[selectedId]?.image && `· 图片大小：${calculateImageSize(states[selectedId].image)}`}
             · 在右侧图库中选择图片填充。
           </p>
         )}
