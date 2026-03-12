@@ -178,6 +178,24 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     }
   };
 
+  // 计算base64图片大小
+  const calculateImageSize = (base64: string) => {
+    // 移除base64前缀
+    const base64Data = base64.split(',')[1];
+    if (!base64Data) return '0 KB';
+    
+    // 计算字节大小：base64编码的字符串每4个字符代表3个字节
+    const bytes = (base64Data.length * 3) / 4;
+    
+    if (bytes < 1024) {
+      return `${Math.round(bytes)} B`;
+    } else if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    } else {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+  };
+
   const handleFiles = async (files: File[]) => {
     for (const file of files) {
       if (file.type.startsWith('image/')) {
@@ -445,11 +463,14 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 )}
                 <button 
                   onClick={(e) => handleDeleteClick(img.id, e)}
-                  className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all"
+                  className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-md hover:bg-red-500 transition-all"
                   title="删除"
                 >
                   <Trash2 size={12} />
                 </button>
+                <div className="absolute bottom-1 left-1 right-1 p-1 bg-black/50 text-white text-[8px] rounded-md text-center">
+                  {calculateImageSize(img.data)}
+                </div>
               </div>
             ))}
           </div>
