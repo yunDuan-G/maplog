@@ -82,6 +82,24 @@ const calculateExportDimensions = (aspectRatio: '16:9' | '4:3' | '4:5' | 'origin
 
 const VIEW_CENTER_OFFSET_Y = 110;
 
+// 计算base64图片大小
+const calculateImageSize = (base64: string) => {
+  // 移除base64前缀
+  const base64Data = base64.split(',')[1];
+  if (!base64Data) return '0 KB';
+  
+  // 计算字节大小：base64编码的字符串每4个字符代表3个字节
+  const bytes = (base64Data.length * 3) / 4;
+  
+  if (bytes < 1024) {
+    return `${Math.round(bytes)} B`;
+  } else if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  } else {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+};
+
 export const MapCanvas: React.FC = () => {
   const { states, updateProvince, resetProvince, resetAll, setAllStates } = useMapState('map');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -1210,7 +1228,9 @@ export const MapCanvas: React.FC = () => {
         <p>拖拽或点击图片填充 · 滚轮缩放 · 拖拽平移</p>
         {selectedId && (
           <p className="mt-1 text-xs text-emerald-500 whitespace-nowrap">
-            已选中：{PROVINCE_NAMES[selectedId] || '某个省份'} · 在右侧图库中选择图片填充。
+            已选中：{PROVINCE_NAMES[selectedId] || '某个省份'} 
+            {states[selectedId]?.image && `· 图片大小：${calculateImageSize(states[selectedId].image)}`} 
+            · 在右侧图库中选择图片填充。
           </p>
         )}
       </div>
@@ -1222,7 +1242,9 @@ export const MapCanvas: React.FC = () => {
             <>
               {!isEditing && ' · '}
               <span className="text-emerald-500">
-                已选中：{PROVINCE_NAMES[selectedId] || '某个省份'} · 在图库中选择图片填充。
+                已选中：{PROVINCE_NAMES[selectedId] || '某个省份'}
+                {states[selectedId]?.image && ` · 图片大小：${calculateImageSize(states[selectedId].image)}`}
+                {' · 在图库中选择图片填充。'}
               </span>
             </>
           )}
