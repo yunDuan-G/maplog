@@ -54,6 +54,25 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   useEffect(() => {
     loadImages();
     loadCompressionSettings();
+    
+    // 监听localStorage变化，实时更新设置
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'gallerySettings') {
+        loadCompressionSettings();
+      }
+    };
+    
+    // 监听自定义事件，实时更新设置
+    const handleSettingsUpdated = () => {
+      loadCompressionSettings();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('gallerySettingsUpdated', handleSettingsUpdated);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('gallerySettingsUpdated', handleSettingsUpdated);
+    };
   }, [type]);
 
   const loadCompressionSettings = () => {

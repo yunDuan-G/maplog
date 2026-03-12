@@ -34,6 +34,8 @@ export const GallerySettings: React.FC<GallerySettingsProps> = ({ onClose }) => 
   const handleSave = () => {
     // 保存设置到本地存储
     localStorage.setItem('gallerySettings', JSON.stringify(settings));
+    // 触发自定义事件，通知其他组件设置已更新
+    window.dispatchEvent(new CustomEvent('gallerySettingsUpdated'));
     onClose();
   };
 
