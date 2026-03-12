@@ -7,6 +7,7 @@ import { useMapState } from '../hooks/useMapState';
 import { Toolbar } from './Toolbar';
 import { ImageGallery } from './ImageGallery';
 import { PROVINCE_NAMES } from '../utils/provinceMap';
+import { saveMapGalleryImage } from '../services/db';
 
 // 基础导出尺寸
 const BASE_EXPORT_WIDTH = 4200;
@@ -97,6 +98,20 @@ const calculateImageSize = (base64: string) => {
     return `${(bytes / 1024).toFixed(1)} KB`;
   } else {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+};
+
+// 生成唯一ID的函数
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  } else {
+    // fallback方法生成UUID
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
 };
 
@@ -518,7 +533,17 @@ export const MapCanvas: React.FC = () => {
         const reader = new FileReader();
         reader.onload = async (event) => {
           const base64 = event.target?.result as string;
+          // 填充到省份
           fillProvinceWithImage(provinceId!, base64, bounds || undefined);
+          // 保存到图库
+          const newImage = {
+            id: generateUUID(),
+            data: base64,
+            timestamp: Date.now(),
+          };
+          await saveMapGalleryImage(newImage);
+          // 触发事件通知图库刷新
+          window.dispatchEvent(new CustomEvent('galleryImagesUpdated', { detail: { type: 'map' } }));
         };
         reader.readAsDataURL(file);
       }
