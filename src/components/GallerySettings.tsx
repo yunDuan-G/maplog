@@ -9,7 +9,7 @@ export const GallerySettings: React.FC<GallerySettingsProps> = ({ onClose }) => 
     enableCompression: false,
     compressionThreshold: 1, // 单位：MB
     compressionQuality: 0.7,
-    maxWidth: 1920
+    maxWidth: 0
   });
 
   useEffect(() => {
@@ -110,6 +110,9 @@ export const GallerySettings: React.FC<GallerySettingsProps> = ({ onClose }) => 
               min="0"
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              建议设置为0，以保持原始图片质量
+            </p>
           </div>
         </div>
 

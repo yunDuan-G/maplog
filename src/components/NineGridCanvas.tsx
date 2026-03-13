@@ -303,7 +303,7 @@ export const NineGridCanvas: React.FC = () => {
     enableCompression: false,
     compressionThreshold: 1, // 单位：MB
     compressionQuality: 0.7,
-    maxWidth: 1920
+    maxWidth: 0
   });
 
   // Viewport state（相对于 baseScale 的缩放）
