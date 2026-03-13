@@ -512,7 +512,7 @@ export const NineGridCanvas: React.FC = () => {
     setPreviewImage(null);
     setSelectedId(null);
     setIsEditing(false);
-    // 生成初始预览
+    // 直接生成预览
     setTimeout(() => {
         setIsExporting(true);
         setTimeout(handleGeneratePreview, 50);
@@ -1002,11 +1002,11 @@ export const NineGridCanvas: React.FC = () => {
 
       {/* Export Preview Panel - Centered */}
       {showExportPreview && (
-        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 transition-all duration-300 ease-in-out w-[90vw] max-w-6xl h-[85vh] flex`}>
-            <div className="flex items-center justify-between mb-4 flex-shrink-0 w-full absolute top-6 left-6 right-6">
+        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-white/95 p-4 md:p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 transition-all duration-300 ease-in-out w-[95vw] md:w-[90vw] max-w-4xl h-[80vh] md:h-[75vh] flex flex-col`}>
+            <div className="flex items-center justify-between mb-4 flex-shrink-0 w-full">
                 <h2 className="text-lg font-medium text-gray-800 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    导出设置与预览
+                    预览
                 </h2>
                 <button 
                     onClick={() => setShowExportPreview(false)}
@@ -1016,45 +1016,38 @@ export const NineGridCanvas: React.FC = () => {
                 </button>
             </div>
             
-            <div className="flex flex-1 mt-16 gap-6">
-                {/* 左侧：导出设置 */}
-                <div className="w-1/3 space-y-4">
-
-
-
-                    <div className="flex gap-3 mt-8">
-                        <button 
-                            onClick={() => setShowExportPreview(false)}
-                            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium"
-                        >
-                            取消
-                        </button>
-                        <button 
-                            onClick={handleConfirmExport}
-                            className="flex-1 px-4 py-2.5 rounded-xl bg-black text-white hover:bg-gray-800 active:scale-95 transition-all shadow-lg text-sm font-medium flex items-center justify-center gap-2"
-                        >
-                            <span>保存图片</span>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        </button>
+            {/* 实时预览 */}
+            <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center relative group mb-4">
+                {previewImage ? (
+                    <img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain shadow-lg" />
+                ) : (
+                    <div className="animate-pulse flex flex-col items-center text-gray-400">
+                        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-4"></div>
+                        <span className="text-sm">正在生成预览...</span>
                     </div>
-                    
-                    <p className="text-center text-[10px] text-gray-400 mt-4">
-                        预览模式下背景为白色，导出将包含当前视图内容
-                    </p>
-                </div>
-                
-                {/* 右侧：实时预览 */}
-                <div className="w-2/3 flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center relative group">
-                    {previewImage ? (
-                        <img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain shadow-lg" />
-                    ) : (
-                        <div className="animate-pulse flex flex-col items-center text-gray-400">
-                            <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-4"></div>
-                            <span className="text-sm">正在生成预览...</span>
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
+            
+            {/* 保存按钮 */}
+            <div className="flex gap-3">
+                <button 
+                    onClick={() => setShowExportPreview(false)}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium"
+                >
+                    取消
+                </button>
+                <button 
+                    onClick={handleConfirmExport}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-black text-white hover:bg-gray-800 active:scale-95 transition-all shadow-lg text-sm font-medium flex items-center justify-center gap-2"
+                >
+                    <span>保存图片</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                </button>
+            </div>
+            
+            <p className="text-center text-[10px] text-gray-400 mt-3">
+                预览模式下背景为白色，导出将包含当前视图内容
+            </p>
         </div>
       )}
       
