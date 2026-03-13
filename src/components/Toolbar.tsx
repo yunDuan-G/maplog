@@ -30,7 +30,8 @@ const TooltipButton: React.FC<{
 }> = ({ onClick, icon, label, className = '', variant = 'default' }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
-  const baseStyles = "relative p-3 rounded-xl transition-all duration-300 ease-out flex items-center justify-center group";
+  const baseStyles = "relative rounded-xl transition-all duration-300 ease-out flex items-center justify-center group";
+  const sizeStyles = "p-2 md:p-3";
   const variants = {
     default: "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900",
     primary: "text-gray-600 hover:bg-blue-50 hover:text-blue-600",
@@ -40,7 +41,7 @@ const TooltipButton: React.FC<{
   return (
     <button
       onClick={onClick}
-      className={`${baseStyles} ${variants[variant]} ${className}`}
+      className={`${baseStyles} ${sizeStyles} ${variants[variant]} ${className}`}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
@@ -104,11 +105,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           bg-white/80 backdrop-blur-xl 
           border border-white/40 shadow-2xl shadow-black/5
           rounded-2xl transition-all duration-300 hover:shadow-black/10 hover:bg-white/90
+          overflow-x-auto scrollbar-hide
+          md:overflow-visible
         ">
           {/* View Controls Group */}
           <div className="flex items-center gap-1 pr-2 border-r border-gray-200/50">
             <TooltipButton onClick={onZoomOut} icon={<ZoomOut size={20} strokeWidth={1.5} />} label="缩小" />
-            <div className="w-12 text-center text-xs font-medium text-gray-400 font-mono select-none">
+            <div className="w-10 md:w-12 text-center text-xs font-medium text-gray-400 font-mono select-none">
               {Math.round(scale * 100)}%
             </div>
             <TooltipButton onClick={onZoomIn} icon={<ZoomIn size={20} strokeWidth={1.5} />} label="放大" />
