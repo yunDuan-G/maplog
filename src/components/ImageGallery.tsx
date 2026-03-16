@@ -39,7 +39,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showLargeImageModal, setShowLargeImageModal] = useState(false);
-  const [largeImageFile, setLargeImageFile] = useState<File | null>(null);
+  const [largeImageFiles, setLargeImageFiles] = useState<File[]>([]);
   const [modalMessage, setModalMessage] = useState('');
   const [modalTitle, setModalTitle] = useState('');
   const [modalType, setModalType] = useState<'confirm' | 'alert'>('confirm');
@@ -305,8 +305,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
         // 处理大图片（如果有）
         if (largeFiles.length > 0) {
-          // 只显示第一个大图片的提示
-          setLargeImageFile(largeFiles[0]);
+          // 显示大图片提示
+          setLargeImageFiles(largeFiles);
           setShowLargeImageModal(true);
         }
       }
@@ -408,18 +408,20 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   // 处理大图片提示弹窗的确认（直接导入）
   const handleLargeImageConfirm = () => {
-    if (largeImageFile) {
-      // 直接处理图片文件
-      processImageFile(largeImageFile);
+    if (largeImageFiles.length > 0) {
+      // 直接处理所有大图片文件
+      for (const file of largeImageFiles) {
+        processImageFile(file);
+      }
       setShowLargeImageModal(false);
-      setLargeImageFile(null);
+      setLargeImageFiles([]);
     }
   };
 
   // 处理大图片提示弹窗的取消（前往设置）
   const handleLargeImageCancel = () => {
     setShowLargeImageModal(false);
-    setLargeImageFile(null);
+    setLargeImageFiles([]);
     onOpenSettings();
   };
 
@@ -599,7 +601,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       <CustomModal
         isOpen={showLargeImageModal}
         title="图片大小提示"
-        message={`您导入的图片大于5MB，可能会影响性能和加载速度。
+        message={`您导入的 ${largeImageFiles.length} 张图片大于5MB，可能会影响性能和加载速度。
 
 建议前往图库设置开启图片压缩功能。`}
         confirmText="前往设置"
