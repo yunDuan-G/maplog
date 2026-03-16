@@ -561,11 +561,11 @@ export const NineGridCanvas: React.FC = () => {
         stage.position({ x: 0, y: 0 });
         stage.batchDraw();
 
-        // 计算网格的实际宽度和高度（包含内边距）
-        const gridTotalWidth = gridCols * CELL_WIDTH + (gridCols - 1) * gridSpacing + 100;
-        const gridTotalHeight = gridRows * CELL_HEIGHT + (gridRows - 1) * gridSpacing + 100;
+        // 计算网格的实际宽度和高度（不包含内边距）
+        const gridTotalWidth = gridCols * CELL_WIDTH + (gridCols - 1) * gridSpacing;
+        const gridTotalHeight = gridRows * CELL_HEIGHT + (gridRows - 1) * gridSpacing;
         
-        // 计算导出区域的起始位置
+        // 计算导出区域的起始位置（不包含内边距）
         const exportX = isExporting ? 0 : (showExportPreview ? 400 : 0);
         const exportY = isExporting ? 0 : (showExportPreview ? 120 : 0);
 
@@ -1189,12 +1189,12 @@ export const NineGridCanvas: React.FC = () => {
       >
         <Layer>
             <Group ref={mapContentRef}>
-                {/* Background for export - dynamically sized based on grid with padding */}
+                {/* Background for export - dynamically sized based on grid without padding */}
                 <Rect 
                     x={isExporting ? 0 : (showExportPreview ? 400 : 0)} 
                     y={isExporting ? 0 : (showExportPreview ? 120 : 0)} 
-                    width={gridCols * CELL_WIDTH + (gridCols - 1) * gridSpacing + 100} 
-                    height={gridRows * CELL_HEIGHT + (gridRows - 1) * gridSpacing + 100} 
+                    width={gridCols * CELL_WIDTH + (gridCols - 1) * gridSpacing} 
+                    height={gridRows * CELL_HEIGHT + (gridRows - 1) * gridSpacing} 
                     fill="white" 
                     visible={showExportPreview} 
                 />
@@ -1205,8 +1205,8 @@ export const NineGridCanvas: React.FC = () => {
                     
                     {/* 九宫格 */}
                     <Group 
-                        x={isExporting ? 50 : (showExportPreview ? 450 : 50)} 
-                        y={isExporting ? 50 : (showExportPreview ? 170 : 50)}
+                        x={isExporting ? 0 : (showExportPreview ? 400 : 50)} 
+                        y={isExporting ? 0 : (showExportPreview ? 120 : 50)}
                     >
                         {gridCells.map((cellId) => {
                             const [_, row, col] = cellId.split('-').map(Number);
