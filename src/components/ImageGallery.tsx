@@ -38,6 +38,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
+  const [showLargeImageModal, setShowLargeImageModal] = useState(false);
+  const [largeImageFile, setLargeImageFile] = useState<File | null>(null);
   const [modalMessage, setModalMessage] = useState('');
   const [modalTitle, setModalTitle] = useState('');
   const [modalType, setModalType] = useState<'confirm' | 'alert'>('confirm');
@@ -228,16 +230,28 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const handleFiles = async (files: File[]) => {
     for (const file of files) {
       if (file.type.startsWith('image/')) {
-        // 检查是否需要压缩
-        const shouldCompress = compressionSettings.enableCompression && 
-          file.size > compressionSettings.compressionThreshold * 1024 * 1024;
-        
-        if (shouldCompress) {
-          // 调用父组件的压缩方法
-          onOpenCompressor(file);
+        // 检查是否开启了压缩功能
+        if (compressionSettings.enableCompression) {
+          // 压缩功能开启，直接检查是否需要压缩
+          const shouldCompress = file.size > compressionSettings.compressionThreshold * 1024 * 1024;
+          
+          if (shouldCompress) {
+            // 调用父组件的压缩方法
+            onOpenCompressor(file);
+          } else {
+            // 直接处理图片文件
+            processImageFile(file);
+          }
         } else {
-          // 直接处理图片文件
-          processImageFile(file);
+          // 压缩功能关闭，检查图片大小是否大于5MB
+          if (file.size > 5 * 1024 * 1024) {
+            // 显示大图片提示弹窗
+            setLargeImageFile(file);
+            setShowLargeImageModal(true);
+          } else {
+            // 直接处理图片文件
+            processImageFile(file);
+          }
         }
       } else if (file.name.endsWith('.json')) {
         // 处理 JSON 文件（导出的数据）
@@ -374,6 +388,23 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     if (importFileInputRef.current) {
       importFileInputRef.current.value = '';
     }
+  };
+
+  // 处理大图片提示弹窗的确认（直接导入）
+  const handleLargeImageConfirm = () => {
+    if (largeImageFile) {
+      // 直接处理图片文件
+      processImageFile(largeImageFile);
+      setShowLargeImageModal(false);
+      setLargeImageFile(null);
+    }
+  };
+
+  // 处理大图片提示弹窗的取消（前往设置）
+  const handleLargeImageCancel = () => {
+    setShowLargeImageModal(false);
+    setLargeImageFile(null);
+    onOpenSettings();
   };
 
 
@@ -546,6 +577,20 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         confirmText="确定"
         onConfirm={handleAlertClose}
         type="alert"
+      />
+
+      {/* 大图片提示弹窗 */}
+      <CustomModal
+        isOpen={showLargeImageModal}
+        title="图片大小提示"
+        message={`您导入的图片大于5MB，可能会影响性能和加载速度。
+
+建议前往图库设置开启图片压缩功能。`}
+        confirmText="直接导入"
+        cancelText="前往设置"
+        onConfirm={handleLargeImageConfirm}
+        onCancel={handleLargeImageCancel}
+        type="confirm"
       />
 
       {/* 图库设置模态框已移至 App.tsx 中，作为独立的模态框显示 */}

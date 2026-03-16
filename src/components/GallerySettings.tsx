@@ -7,7 +7,7 @@ interface GallerySettingsProps {
 export const GallerySettings: React.FC<GallerySettingsProps> = ({ onClose }) => {
   const [settings, setSettings] = useState({
     enableCompression: false,
-    compressionThreshold: 1, // 单位：MB
+    compressionThreshold: 5, // 单位：MB
     compressionQuality: 0.7,
     maxWidth: 0
   });
