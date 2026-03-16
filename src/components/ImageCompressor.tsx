@@ -1,22 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 interface ImageCompressorProps {
-  onCompress: (compressedBlob: Blob) => void;
+  onCompress: (compressedBlobs: Blob[]) => void;
   onCancel: () => void;
-  originalFile?: File;
+  originalFiles?: File[];
+  compressionProgress?: number;
+  compressedCount?: number;
+  onProgressUpdate?: (progress: number, count: number) => void;
 }
 
 export const ImageCompressor: React.FC<ImageCompressorProps> = ({
   onCompress,
   onCancel,
-  originalFile
+  originalFiles = [],
+  compressionProgress = 0,
+  compressedCount = 0,
+  onProgressUpdate
 }) => {
   const [quality, setQuality] = useState<number>(0.7);
   const [maxWidth, setMaxWidth] = useState<number>(1920);
-  const [compressedImage, setCompressedImage] = useState<string | null>(null);
-  const [compressedSize, setCompressedSize] = useState<number>(0);
-  const [originalSize, setOriginalSize] = useState<number>(0);
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
+  const [totalOriginalSize, setTotalOriginalSize] = useState<number>(0);
 
   // 从本地存储加载压缩设置
   useEffect(() => {
@@ -39,74 +43,88 @@ export const ImageCompressor: React.FC<ImageCompressorProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   React.useEffect(() => {
-    if (originalFile) {
-      setOriginalSize(originalFile.size);
+    if (originalFiles.length > 0) {
+      const totalSize = originalFiles.reduce((sum, file) => sum + file.size, 0);
+      setTotalOriginalSize(totalSize);
     }
-  }, [originalFile]);
+  }, [originalFiles]);
 
   const compressImage = async () => {
-    if (!originalFile) return;
+    if (originalFiles.length === 0) return;
 
     setIsCompressing(true);
 
     try {
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(originalFile);
-        reader.onload = (event) => {
-          const img = new Image();
-          img.src = event.target?.result as string;
-          img.onload = () => {
-            const canvas = canvasRef.current || document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
+      const compressedBlobs: Blob[] = [];
+      const totalFiles = originalFiles.length;
 
-            // 计算新尺寸 (保持宽高比)
-            if (maxWidth > 0 && width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            }
+      for (let i = 0; i < totalFiles; i++) {
+        const file = originalFiles[i];
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+              const canvas = canvasRef.current || document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
 
-            canvas.width = width;
-            canvas.height = height;
+              // 计算新尺寸 (保持宽高比)
+              if (maxWidth > 0 && width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
 
-            const ctx = canvas.getContext('2d');
-            
-            // 对于JPEG，填充白色背景以防透明区域变黑
-            if (ctx) {
-              ctx.fillStyle = "#FFFFFF";
-              ctx.fillRect(0, 0, width, height);
+              canvas.width = width;
+              canvas.height = height;
 
-              // 高质量绘图设置
-              ctx.imageSmoothingEnabled = true;
-              ctx.imageSmoothingQuality = 'high';
+              const ctx = canvas.getContext('2d');
               
-              ctx.drawImage(img, 0, 0, width, height);
+              // 对于JPEG，填充白色背景以防透明区域变黑
+              if (ctx) {
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, width, height);
 
-              // 导出为 Blob
-              canvas.toBlob(
-                (blob) => {
-                  if (blob) {
-                    resolve(blob);
-                  } else {
-                    reject(new Error('压缩失败，Blob为空'));
-                  }
-                },
-                'image/jpeg',
-                quality
-              );
-            } else {
-              reject(new Error('无法获取Canvas上下文'));
-            }
+                // 高质量绘图设置
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // 导出为 Blob
+                canvas.toBlob(
+                  (blob) => {
+                    if (blob) {
+                      resolve(blob);
+                    } else {
+                      reject(new Error('压缩失败，Blob为空'));
+                    }
+                  },
+                  'image/jpeg',
+                  quality
+                );
+              } else {
+                reject(new Error('无法获取Canvas上下文'));
+              }
+            };
+            img.onerror = (err) => reject(err);
           };
-          img.onerror = (err) => reject(err);
-        };
-        reader.onerror = (err) => reject(err);
-      });
+          reader.onerror = (err) => reject(err);
+        });
 
-      setCompressedSize(blob.size);
-      setCompressedImage(URL.createObjectURL(blob));
-      onCompress(blob);
+        compressedBlobs.push(blob);
+        
+        // 更新进度
+        const currentCount = i + 1;
+        const progress = (currentCount / totalFiles) * 100;
+        if (onProgressUpdate) {
+          onProgressUpdate(progress, currentCount);
+        }
+      }
+
+      onCompress(compressedBlobs);
     } catch (error) {
       console.error('压缩失败:', error);
       alert('压缩失败: ' + (error as Error).message);
@@ -127,10 +145,25 @@ export const ImageCompressor: React.FC<ImageCompressorProps> = ({
     <div className="p-4">
       <h3 className="text-lg font-medium text-gray-900 mb-4">图片压缩</h3>
       
-      {originalFile && (
+      {originalFiles.length > 0 && (
         <div className="mb-4">
-          <div className="text-sm text-gray-600">
-            原图: {originalFile.name} ({formatSize(originalSize)})
+          <div className="text-sm font-medium text-gray-700 mb-2">
+            待压缩图片 ({originalFiles.length} 张)
+          </div>
+          <div className="text-sm text-gray-600 space-y-1">
+            {originalFiles.slice(0, 5).map((file, index) => (
+              <div key={index}>
+                {file.name} ({formatSize(file.size)})
+              </div>
+            ))}
+            {originalFiles.length > 5 && (
+              <div className="text-gray-500">
+                ... 还有 {originalFiles.length - 5} 张图片
+              </div>
+            )}
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              总大小: {formatSize(totalOriginalSize)}
+            </div>
           </div>
         </div>
       )}
@@ -168,7 +201,7 @@ export const ImageCompressor: React.FC<ImageCompressorProps> = ({
       <div className="flex gap-3 mb-6">
         <button
           onClick={compressImage}
-          disabled={!originalFile || isCompressing}
+          disabled={originalFiles.length === 0 || isCompressing}
           className="flex-1 px-4 py-2 rounded-xl bg-black text-white hover:bg-gray-800 disabled:bg-gray-400 transition-colors"
         >
           {isCompressing ? '压缩中...' : '开始压缩'}
@@ -181,22 +214,18 @@ export const ImageCompressor: React.FC<ImageCompressorProps> = ({
         </button>
       </div>
 
-      {compressedImage && (
+      {isCompressing && (
         <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">压缩结果</h4>
-          <div className="text-sm text-gray-600 mb-2">
-            大小: {formatSize(compressedSize)}
-            {originalSize > 0 && (
-              <span className="text-green-600 ml-2">
-                (压缩率: {(1 - compressedSize / originalSize * 100).toFixed(1)}%)
-              </span>
-            )}
+          <h4 className="text-sm font-medium text-gray-900 mb-2">压缩进度</h4>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+            <div 
+              className="bg-blue-600 h-2.5 rounded-full" 
+              style={{ width: `${compressionProgress}%` }}
+            ></div>
           </div>
-          <img
-            src={compressedImage}
-            alt="压缩后"
-            className="max-w-full h-auto mt-2 rounded"
-          />
+          <div className="text-sm text-gray-600">
+            已压缩: {compressedCount} / {originalFiles.length} 张
+          </div>
         </div>
       )}
 

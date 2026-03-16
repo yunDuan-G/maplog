@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Trash2, ChevronDown, Image as ImageIcon, Link, Database, Settings } from 'lucide-react';
-import { 
-  saveMapGalleryImage, 
-  getAllMapGalleryImages, 
-  deleteMapGalleryImage, 
-  clearMapGallery, 
-  saveNineGridGalleryImage, 
-  getAllNineGridGalleryImages, 
-  deleteNineGridGalleryImage, 
-  clearNineGridGallery, 
-  GalleryImage 
+import {
+  saveMapGalleryImage,
+  getAllMapGalleryImages,
+  deleteMapGalleryImage,
+  clearMapGallery,
+  saveNineGridGalleryImage,
+  getAllNineGridGalleryImages,
+  deleteNineGridGalleryImage,
+  clearNineGridGallery,
+  GalleryImage
 } from '../services/db';
 import { CustomModal } from './CustomModal.tsx';
 
@@ -21,13 +21,13 @@ interface ImageGalleryProps {
   hasActiveProvince: boolean;
   type: 'map' | 'ninegrid';
   onOpenSettings: () => void;
-  onOpenCompressor: (file: File) => void;
+  onOpenCompressor: (file: File | File[]) => void;
 }
 
-export const ImageGallery: React.FC<ImageGalleryProps> = ({ 
-  isOpen, 
-  onClose, 
-  onDragStart, 
+export const ImageGallery: React.FC<ImageGalleryProps> = ({
+  isOpen,
+  onClose,
+  onDragStart,
   onFillWithImage,
   hasActiveProvince,
   type,
@@ -56,19 +56,19 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   useEffect(() => {
     loadImages();
     loadCompressionSettings();
-    
+
     // 监听localStorage变化，实时更新设置
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'gallerySettings') {
         loadCompressionSettings();
       }
     };
-    
+
     // 监听自定义事件，实时更新设置
     const handleSettingsUpdated = () => {
       loadCompressionSettings();
     };
-    
+
     // 监听自定义事件，实时更新图片列表
     const handleImagesUpdated = (event: CustomEvent) => {
       const { type: eventType } = event.detail;
@@ -76,7 +76,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         loadImages();
       }
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('gallerySettingsUpdated', handleSettingsUpdated);
     window.addEventListener('galleryImagesUpdated', handleImagesUpdated as EventListener);
@@ -100,8 +100,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   const loadImages = async () => {
     try {
-      const loadedImages = type === 'map' 
-        ? await getAllMapGalleryImages() 
+      const loadedImages = type === 'map'
+        ? await getAllMapGalleryImages()
         : await getAllNineGridGalleryImages();
       setImages(loadedImages.sort((a, b) => b.timestamp - a.timestamp));
     } catch (error) {
@@ -123,15 +123,15 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   // 处理弹窗确认
   const handleModalConfirm = async () => {
     setShowConfirmModal(false);
-    
+
     try {
       const data = importData;
       const currentType = importType;
-      
+
       // 导入排版数据
       const { setAllStates } = await import('../hooks/useMapState');
       await setAllStates(data.states || {}, currentType);
-      
+
       // 导入图库图片
       if (data.galleryImages && Array.isArray(data.galleryImages)) {
         // 清空现有图库
@@ -140,7 +140,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         } else {
           await clearNineGridGallery();
         }
-        
+
         // 保存导入的图片
         for (const image of data.galleryImages) {
           if (currentType === 'map') {
@@ -149,11 +149,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             await saveNineGridGalleryImage(image);
           }
         }
-        
+
         // 重新加载图库
         loadImages();
       }
-      
+
       // 导入九宫格配置
       if (currentType === 'ninegrid' && data.gridConfig) {
         const { rows, cols, spacing } = data.gridConfig;
@@ -165,7 +165,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
           localStorage.setItem('gridSpacing', spacing.toString());
         }
       }
-      
+
       // 数据导入成功，页面将自动刷新
       setModalTitle('导入成功');
       setModalMessage('数据导入成功！页面将自动刷新以应用更改。');
@@ -214,10 +214,10 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     // 移除base64前缀
     const base64Data = base64.split(',')[1];
     if (!base64Data) return '0 KB';
-    
+
     // 计算字节大小：base64编码的字符串每4个字符代表3个字节
     const bytes = (base64Data.length * 3) / 4;
-    
+
     if (bytes < 1024) {
       return `${Math.round(bytes)} B`;
     } else if (bytes < 1024 * 1024) {
@@ -228,71 +228,87 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   };
 
   const handleFiles = async (files: File[]) => {
-    for (const file of files) {
-      if (file.type.startsWith('image/')) {
-        // 检查是否开启了压缩功能
-        if (compressionSettings.enableCompression) {
-          // 压缩功能开启，直接检查是否需要压缩
-          const shouldCompress = file.size > compressionSettings.compressionThreshold * 1024 * 1024;
-          
-          if (shouldCompress) {
-            // 调用父组件的压缩方法
-            onOpenCompressor(file);
-          } else {
-            // 直接处理图片文件
-            processImageFile(file);
-          }
-        } else {
-          // 压缩功能关闭，检查图片大小是否大于5MB
-          if (file.size > 5 * 1024 * 1024) {
-            // 显示大图片提示弹窗
-            setLargeImageFile(file);
-            setShowLargeImageModal(true);
-          } else {
-            // 直接处理图片文件
-            processImageFile(file);
-          }
-        }
-      } else if (file.name.endsWith('.json')) {
-        // 处理 JSON 文件（导出的数据）
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          try {
-            const data = JSON.parse(event.target?.result as string);
-            
-            // 验证数据类型
-            if (data.type && (data.type === 'map' || data.type === 'ninegrid')) {
-              if (data.type !== type) {
-                setModalTitle('导入失败');
-                setModalMessage(`导入失败：请将${data.type === 'map' ? '地图' : '九宫格'}数据拖放到对应类型的图库中`);
-                setModalType('alert');
-                setShowAlertModal(true);
-                return;
-              }
-              
-              // 显示确认对话框
-              const confirmMessage = `导入数据将会：\n1. 清空当前${type === 'map' ? '地图' : '九宫格'}的所有排版数据\n2. 清空当前图库中的所有图片\n${type === 'ninegrid' ? '3. 重置九宫格配置（行数、列数、间隔）' : ''}\n\n确定要继续导入吗？`;
-              
-              setModalTitle('确认导入');
-              setModalMessage(confirmMessage);
-              setImportData(data);
-              setImportType(type);
-              setShowConfirmModal(true);
-            } else {
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    const jsonFiles = files.filter(file => file.name.endsWith('.json'));
+
+    // 处理 JSON 文件
+    for (const file of jsonFiles) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const data = JSON.parse(event.target?.result as string);
+
+          // 验证数据类型
+          if (data.type && (data.type === 'map' || data.type === 'ninegrid')) {
+            if (data.type !== type) {
               setModalTitle('导入失败');
-              setModalMessage('导入失败：无效的数据文件格式');
+              setModalMessage(`导入失败：请将${data.type === 'map' ? '地图' : '九宫格'}数据拖放到对应类型的图库中`);
               setModalType('alert');
               setShowAlertModal(true);
+              return;
             }
-          } catch (err) {
+
+            // 显示确认对话框
+            const confirmMessage = `导入数据将会：\n1. 清空当前${type === 'map' ? '地图' : '九宫格'}的所有排版数据\n2. 清空当前图库中的所有图片\n${type === 'ninegrid' ? '3. 重置九宫格配置（行数、列数、间隔）' : ''}\n\n确定要继续导入吗？`;
+
+            setModalTitle('确认导入');
+            setModalMessage(confirmMessage);
+            setImportData(data);
+            setImportType(type);
+            setShowConfirmModal(true);
+          } else {
             setModalTitle('导入失败');
-            setModalMessage('导入失败：请检查文件格式');
+            setModalMessage('导入失败：无效的数据文件格式');
             setModalType('alert');
             setShowAlertModal(true);
-            console.error(err);
           }
-        };
-        reader.readAsText(file);
+        } catch (err) {
+          setModalTitle('导入失败');
+          setModalMessage('导入失败：请检查文件格式');
+          setModalType('alert');
+          setShowAlertModal(true);
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 处理图片文件
+    if (imageFiles.length > 0) {
+      if (compressionSettings.enableCompression) {
+        // 压缩功能开启
+        const filesToCompress = imageFiles.filter(file =>
+          file.size > compressionSettings.compressionThreshold * 1024 * 1024
+        );
+        const filesToProcessDirectly = imageFiles.filter(file =>
+          file.size <= compressionSettings.compressionThreshold * 1024 * 1024
+        );
+
+        // 直接处理不需要压缩的图片
+        for (const file of filesToProcessDirectly) {
+          processImageFile(file);
+        }
+
+        // 批量压缩需要压缩的图片
+        if (filesToCompress.length > 0) {
+          onOpenCompressor(filesToCompress);
+        }
+      } else {
+        // 压缩功能关闭
+        const largeFiles = imageFiles.filter(file => file.size > 5 * 1024 * 1024);
+        const smallFiles = imageFiles.filter(file => file.size <= 5 * 1024 * 1024);
+
+        // 直接处理小图片
+        for (const file of smallFiles) {
+          processImageFile(file);
+        }
+
+        // 处理大图片（如果有）
+        if (largeFiles.length > 0) {
+          // 只显示第一个大图片的提示
+          setLargeImageFile(largeFiles[0]);
+          setShowLargeImageModal(true);
+        }
       }
     }
   };
@@ -313,7 +329,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       }
       setImages(prev => [newImage, ...prev]);
     };
-    
+
     if (compressedBlob) {
       reader.readAsDataURL(compressedBlob);
     } else {
@@ -351,7 +367,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     setDeleteImageId(null);
     setShowConfirmModal(false);
   };
-  
+
   // 处理清空图库确认
   const handleClearAllClick = () => {
     setModalTitle('确认清空');
@@ -442,7 +458,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             图库
           </h2>
           <div className="flex items-center gap-1">
-            <button 
+            <button
                 onClick={onOpenSettings}
                 className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 title="设置"
@@ -450,7 +466,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 <Settings size={16} />
             </button>
              {images.length > 0 && (
-                <button 
+                <button
                     onClick={handleClearAllClick}
                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="清空图库"
@@ -459,7 +475,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 </button>
              )}
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="absolute left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 text-xs font-medium flex items-center gap-1 transition-colors md:hidden"
             title="收起图库"
@@ -497,16 +513,16 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
 
             {images.map((img) => (
-              <div 
-                key={img.id} 
+              <div
+                key={img.id}
                 className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
                 draggable
                 onDragStart={(e) => onDragStart(e, img.data)}
                 onClick={() => setActiveImageId(prev => prev === img.id ? null : img.id)}
               >
-                <img 
-                  src={img.data} 
-                  alt="Gallery item" 
+                <img
+                  src={img.data}
+                  alt="Gallery item"
                   className="w-full h-full object-cover"
                 />
                 {activeImageId === img.id && hasActiveProvince && (
@@ -521,7 +537,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                     填充到选中省份
                   </button>
                 )}
-                <button 
+                <button
                   onClick={(e) => handleDeleteClick(img.id, e)}
                   className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-md hover:bg-red-500 transition-all"
                   title="删除"
@@ -540,20 +556,20 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             </div>
           )}
 
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            multiple 
-            accept="image/*" 
-            onChange={handleFileUpload} 
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            multiple
+            accept="image/*"
+            onChange={handleFileUpload}
           />
-          <input 
-            type="file" 
-            ref={importFileInputRef} 
-            className="hidden" 
-            accept=".json" 
-            onChange={handleImportDataFile} 
+          <input
+            type="file"
+            ref={importFileInputRef}
+            className="hidden"
+            accept=".json"
+            onChange={handleImportDataFile}
           />
         </div>
       </div>
@@ -586,10 +602,10 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         message={`您导入的图片大于5MB，可能会影响性能和加载速度。
 
 建议前往图库设置开启图片压缩功能。`}
-        confirmText="直接导入"
-        cancelText="前往设置"
-        onConfirm={handleLargeImageConfirm}
-        onCancel={handleLargeImageCancel}
+        confirmText="前往设置"
+        cancelText="直接导入"
+        onConfirm={handleLargeImageCancel}
+        onCancel={handleLargeImageConfirm}
         type="confirm"
       />
 

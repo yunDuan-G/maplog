@@ -33,17 +33,17 @@ export const CustomModal: React.FC<CustomModalProps> = ({
         <div className="flex justify-end gap-3">
           {type === 'confirm' && onCancel && (
             <button
-              onClick={onConfirm}
+              onClick={onCancel}
               className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              {confirmText}
+              {cancelText}
             </button>
           )}
           <button
-            onClick={onCancel}
+            onClick={onConfirm}
             className={`px-4 py-2 rounded-xl ${type === 'confirm' ? 'bg-black text-white hover:bg-gray-800' : 'bg-blue-500 text-white hover:bg-blue-600'} transition-colors`}
           >
-            {cancelText}
+            {confirmText}
           </button>
         </div>
       </div>

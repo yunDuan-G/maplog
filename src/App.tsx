@@ -18,8 +18,10 @@ export default function App() {
   
   // 图片压缩模态框状态
   const [showImageCompressor, setShowImageCompressor] = useState(false);
-  const [currentCompressFile, setCurrentCompressFile] = useState<File | null>(null);
+  const [currentCompressFiles, setCurrentCompressFiles] = useState<File[]>([]);
   const [currentCompressType, setCurrentCompressType] = useState<'map' | 'ninegrid'>('map');
+  const [compressionProgress, setCompressionProgress] = useState<number>(0);
+  const [compressedCount, setCompressedCount] = useState<number>(0);
 
   // 当 currentView 变化时，保存到 localStorage
   useEffect(() => {
@@ -41,12 +43,18 @@ export default function App() {
   // 监听来自子组件的压缩事件
   useEffect(() => {
     const handleOpenCompressor = (event: CustomEvent) => {
-      const { file, type, onComplete } = event.detail;
-      setCurrentCompressFile(file);
-      setCurrentCompressType(type);
-      setShowImageCompressor(true);
-      // 保存回调函数
-      window['__compressCompleteCallback'] = onComplete;
+      const { files, file, type, onComplete } = event.detail;
+      // 支持单个文件或多个文件
+      const filesToCompress = files || (file ? [file] : []);
+      if (filesToCompress.length > 0) {
+        setCurrentCompressFiles(filesToCompress);
+        setCurrentCompressType(type);
+        setCompressionProgress(0);
+        setCompressedCount(0);
+        setShowImageCompressor(true);
+        // 保存回调函数
+        window['__compressCompleteCallback'] = onComplete;
+      }
     };
 
     window.addEventListener('openImageCompressor', handleOpenCompressor as EventListener);
@@ -71,39 +79,51 @@ export default function App() {
   };
 
   // 处理压缩完成
-  const handleCompress = async (compressedBlob: Blob) => {
-    if (currentCompressFile) {
+  const handleCompress = async (compressedBlobs: Blob[]) => {
+    const totalFiles = currentCompressFiles.length;
+    let processedCount = 0;
+
+    for (let i = 0; i < totalFiles; i++) {
+      const compressedBlob = compressedBlobs[i];
       const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
-        const newImage: GalleryImage = {
-          id: generateUUID(),
-          data: base64,
-          timestamp: Date.now(),
+
+      await new Promise<void>((resolve) => {
+        reader.onload = async (event) => {
+          const base64 = event.target?.result as string;
+          const newImage: GalleryImage = {
+            id: generateUUID(),
+            data: base64,
+            timestamp: Date.now(),
+          };
+          if (currentCompressType === 'map') {
+            await saveMapGalleryImage(newImage);
+          } else {
+            await saveNineGridGalleryImage(newImage);
+          }
+          processedCount++;
+          setCompressedCount(processedCount);
+          setCompressionProgress((processedCount / totalFiles) * 100);
+          resolve();
         };
-        if (currentCompressType === 'map') {
-          await saveMapGalleryImage(newImage);
-        } else {
-          await saveNineGridGalleryImage(newImage);
-        }
-        // 调用回调函数（如果存在）
-        if (window['__compressCompleteCallback']) {
-          window['__compressCompleteCallback'](base64);
-          delete window['__compressCompleteCallback'];
-        }
-        // 触发自定义事件，通知图库组件刷新
-        window.dispatchEvent(new CustomEvent('galleryImagesUpdated', { detail: { type: currentCompressType } }));
-        setShowImageCompressor(false);
-        setCurrentCompressFile(null);
-      };
-      reader.readAsDataURL(compressedBlob);
+        reader.readAsDataURL(compressedBlob);
+      });
     }
+
+    // 调用回调函数（如果存在）
+    if (window['__compressCompleteCallback']) {
+      window['__compressCompleteCallback'](''); // 批量处理时不需要返回单个base64
+      delete window['__compressCompleteCallback'];
+    }
+    // 触发自定义事件，通知图库组件刷新
+    window.dispatchEvent(new CustomEvent('galleryImagesUpdated', { detail: { type: currentCompressType } }));
+    setShowImageCompressor(false);
+    setCurrentCompressFiles([]);
   };
 
   // 处理压缩取消
   const handleCompressCancel = () => {
     setShowImageCompressor(false);
-    setCurrentCompressFile(null);
+    setCurrentCompressFiles([]);
   };
 
   return (
@@ -137,13 +157,19 @@ export default function App() {
       )}
 
       {/* 图片压缩模态框 */}
-      {showImageCompressor && currentCompressFile && (
+      {showImageCompressor && currentCompressFiles.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <ImageCompressor
-              originalFile={currentCompressFile}
+              originalFiles={currentCompressFiles}
+              compressionProgress={compressionProgress}
+              compressedCount={compressedCount}
               onCompress={handleCompress}
               onCancel={handleCompressCancel}
+              onProgressUpdate={(progress, count) => {
+                setCompressionProgress(progress);
+                setCompressedCount(count);
+              }}
             />
           </div>
         </div>
