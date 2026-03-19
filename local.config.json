@@ -2,7 +2,12 @@
   "localLinks": [
     {
       "name": "成果展示",
-      "url": "https://example.com",
+      "url": "http://pyq.yunduan019.com/memo/25",
+      "icon": "external-link"
+    },
+    {
+      "name": "留言板",
+      "url": "http://www.yunduan019.com/liu",
       "icon": "external-link"
     }
   ]
