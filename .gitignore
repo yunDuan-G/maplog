@@ -5,3 +5,5 @@ dist
 npm-debug.log*
 yarn-error.log*
 .idea
+# 本地开发文件，不上传到GitHub
+/src/components/LinkAdjuster.tsx
