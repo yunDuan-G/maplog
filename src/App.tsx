@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import { MapCanvas } from './components/MapCanvas';
 import { NineGridCanvas } from './components/NineGridCanvas';
-import { Map, Grid } from 'lucide-react';
+import { Map, Grid, ExternalLink } from 'lucide-react';
 import { GallerySettings } from './components/GallerySettings.tsx';
 import { ImageCompressor } from './components/ImageCompressor.tsx';
 import { saveMapGalleryImage, saveNineGridGalleryImage, GalleryImage } from './services/db';
+
+interface LocalLink {
+  name: string;
+  url: string;
+  icon: string;
+}
 
 export default function App() {
   // 从 localStorage 读取保存的视图状态，默认值为 'map'
@@ -22,6 +28,9 @@ export default function App() {
   const [currentCompressType, setCurrentCompressType] = useState<'map' | 'ninegrid'>('map');
   const [compressionProgress, setCompressionProgress] = useState<number>(0);
   const [compressedCount, setCompressedCount] = useState<number>(0);
+  
+  // 本地链接配置
+  const [localLinks, setLocalLinks] = useState<LocalLink[]>([]);
 
   // 当 currentView 变化时，保存到 localStorage
   useEffect(() => {
@@ -62,6 +71,22 @@ export default function App() {
       window.removeEventListener('openImageCompressor', handleOpenCompressor as EventListener);
       delete window['__compressCompleteCallback'];
     };
+  }, []);
+
+  // 加载本地链接配置
+  useEffect(() => {
+    const loadLocalLinks = async () => {
+      try {
+        const response = await fetch('/local.config.json');
+        if (response.ok) {
+          const config = await response.json();
+          setLocalLinks(config.localLinks || []);
+        }
+      } catch (error) {
+        console.log('No local config file found, skipping local links');
+      }
+    };
+    loadLocalLinks();
   }, []);
 
   // 生成唯一ID的函数
@@ -144,6 +169,20 @@ export default function App() {
         >
           <Grid size={20} strokeWidth={1.5} />
         </button>
+        
+        {/* 本地链接按钮 */}
+        {localLinks.map((link, index) => (
+          <div key={index} className="flex flex-col items-center gap-1">
+            <button
+              onClick={() => window.open(link.url, '_blank')}
+              className="p-3 rounded-xl transition-all duration-300 ease-out flex items-center justify-center text-gray-600 hover:bg-gray-100/80 hover:text-gray-900"
+              title={link.name}
+            >
+              <ExternalLink size={20} strokeWidth={1.5} />
+            </button>
+            <span className="text-xs text-gray-500 max-w-[60px] text-center truncate">{link.name}</span>
+          </div>
+        ))}
       </div>
 
       {/* 主要内容 */}
