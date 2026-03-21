@@ -1006,7 +1006,7 @@ export const NineGridCanvas: React.FC = () => {
 
       {/* Export Preview Panel - Centered */}
       {showExportPreview && (
-        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-white/95 p-4 md:p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 transition-all duration-300 ease-in-out w-[95vw] md:w-[90vw] max-w-4xl h-[80vh] md:h-[75vh] flex flex-col`}>
+        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-100 bg-white/95 p-4 md:p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 transition-all duration-300 ease-in-out w-[95vw] md:w-[90vw] max-w-4xl h-[80vh] md:h-[75vh] flex flex-col`}>
             <div className="flex items-center justify-between mb-4 flex-shrink-0 w-full">
                 <h2 className="text-lg font-medium text-gray-800 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -1021,7 +1021,7 @@ export const NineGridCanvas: React.FC = () => {
             </div>
             
             {/* 实时预览 */}
-            <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center relative group mb-4">
+            <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center relative group mb-4 overflow-y-auto">
                 {previewImage ? (
                     <img src={previewImage} alt="Preview" className="max-w-full max-h-full object-contain shadow-lg" />
                 ) : (
@@ -1057,8 +1057,8 @@ export const NineGridCanvas: React.FC = () => {
       
       {/* Grid Size Modal */}
       {showGridSizeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl px-6 py-5 w-80 max-w-[80vw]">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl px-6 py-5 w-80 max-w-[80vw] max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">设置格子数量</h3>
             <div className="space-y-4 mb-6">
               <div>

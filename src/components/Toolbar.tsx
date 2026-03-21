@@ -167,7 +167,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       </div>
 
       {showConfirmReset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl px-5 py-4 w-72 max-w-[80vw]">
             <h3 className="text-sm font-medium text-gray-900 mb-2">{type === 'map' ? '清空地图？' : '清空格子图片？'}</h3>
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
@@ -195,7 +195,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       )}
 
       {showProvinceSelector && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl px-5 py-4 w-80 max-w-[80vw]">
             <h3 className="text-sm font-medium text-gray-900 mb-3">显示单个省份</h3>
             <div className="space-y-4">

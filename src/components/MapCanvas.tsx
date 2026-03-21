@@ -788,9 +788,9 @@ export const MapCanvas: React.FC = () => {
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: 50
+            zIndex: 100
           }}
-          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[450px] h-[80vh] max-h-[600px]"
+          className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[450px] h-[80vh] max-h-[600px] flex flex-col overflow-hidden"
         >
             <div
               className="flex items-center justify-between mb-4 flex-shrink-0 w-full"
@@ -810,7 +810,7 @@ export const MapCanvas: React.FC = () => {
                 </button>
             </div>
 
-            <div className="space-y-4 mb-6">
+            <div className="space-y-4 mb-6 overflow-y-auto flex-1">
                 <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">主标题</label>
                     <input
@@ -907,7 +907,7 @@ export const MapCanvas: React.FC = () => {
                 </div>
                 <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">背景颜色</label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex gap-3 p-2">
                         {[
                             { name: '白色', value: '#FFFFFF' },
                             { name: '灰色', value: '#F5F5F5' },
@@ -967,7 +967,7 @@ export const MapCanvas: React.FC = () => {
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: 50
+            zIndex: 100
           }}
           className="bg-white/95 p-6 rounded-2xl shadow-2xl backdrop-blur-md border border-gray-200 w-[90vw] max-w-[600px] h-[80vh] max-h-[600px] flex flex-col"
         >
@@ -988,7 +988,7 @@ export const MapCanvas: React.FC = () => {
                 </button>
             </div>
 
-            <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center mb-6 relative group">
+            <div className="flex-1 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center mb-6 relative group overflow-y-auto">
                 {isGeneratingPreview ? (
                     <div className="animate-pulse flex flex-col items-center text-gray-400">
                         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-4"></div>
